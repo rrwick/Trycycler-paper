@@ -1,0 +1,334 @@
+---
+title: "Trycycler simulated read tests"
+date: "2020-12-18"
+author: "Ryan Wick"
+output:
+  html_document:
+    pandoc_args: ["+RTS", "-K64m", "-RTS", "--self-contained",]
+    df_print: paged
+    keep_md: false
+    toc: true
+    toc_float: true
+---
+
+This document contains the R code used to generate plots for the real read tests part of my Trycycler paper.
+
+This script is licensed under a Creative Commons Attribution 4.0 International License. You should have received a copy of the license along with this work. If not, see <http://creativecommons.org/licenses/by/4.0/>.
+
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(cowplot)
+library(scales)
+```
+
+
+## Output settings
+
+```{r}
+opts_chunk$set(fig.width=8, fig.height=5, dpi=300, fig.path='./plots/', echo=TRUE, dev=c('png','pdf'), warning=FALSE, message=FALSE)
+pdf.options(useDingbats = FALSE)
+```
+
+
+## Load data
+
+```{r}
+excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/Paper_GitHub_repo/simulated_read_tests/table_s1_simulated_read_results.xlsx"
+
+comparisons <- read_excel(excel_filename, sheet = "Comparisons", col_names = FALSE)
+
+unicycler_mean <- pull(comparisons[3:12,2])
+unicycler_worst <- pull(comparisons[3:12,3])
+
+miniasm_mean <- pull(comparisons[3:12,4])
+miniasm_worst <- pull(comparisons[3:12,5])
+miniasm_pilon_mean <- pull(comparisons[3:12,6])
+miniasm_pilon_worst <- pull(comparisons[3:12,7])
+
+raven_mean <- pull(comparisons[3:12,8])
+raven_worst <- pull(comparisons[3:12,9])
+raven_pilon_mean <- pull(comparisons[3:12,10])
+raven_pilon_worst <- pull(comparisons[3:12,11])
+
+# These are the unfixed Flye values:
+flye_mean <- pull(comparisons[3:12,12])
+flye_worst <- pull(comparisons[3:12,13])
+flye_pilon_mean <- pull(comparisons[3:12,14])
+flye_pilon_worst <- pull(comparisons[3:12,15])
+
+# And these are values for Flye assemblies with manually fixed circularisation:
+flye_fixed_mean <- pull(comparisons[3:12,16])
+flye_fixed_worst <- pull(comparisons[3:12,17])
+flye_fixed_pilon_mean <- pull(comparisons[3:12,18])
+flye_fixed_pilon_worst <- pull(comparisons[3:12,19])
+
+trycycler_mean <- pull(comparisons[3:12,20])
+trycycler_worst <- pull(comparisons[3:12,21])
+trycycler_pilon_mean <- pull(comparisons[3:12,22])
+trycycler_pilon_worst <- pull(comparisons[3:12,23])
+
+# Build data frames of mean/worst comparisons:
+mean_comparisons <- data.frame(matrix(ncol = 2, nrow = 0))
+worst_comparisons <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(mean_comparisons) <- c("assembler", "identity")
+colnames(worst_comparisons) <- c("assembler", "identity")
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Unicycler hybrid", 10), identity = unicycler_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Flye", 10), identity = flye_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Flye+Pilon", 10), identity = flye_pilon_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Trycycler", 10), identity = trycycler_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Trycycler+Pilon", 10), identity = trycycler_pilon_mean))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Unicycler hybrid", 10), identity = unicycler_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Flye", 10), identity = flye_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Flye+Pilon", 10), identity = flye_pilon_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Trycycler", 10), identity = trycycler_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Trycycler+Pilon", 10), identity = trycycler_pilon_worst))
+mean_comparisons$identity <- as.numeric(as.character(mean_comparisons$identity))
+worst_comparisons$identity <- as.numeric(as.character(worst_comparisons$identity))
+mean_comparisons$distance <- 1.0 - mean_comparisons$identity
+worst_comparisons$distance <- 1.0 - worst_comparisons$identity
+
+# Now build them again using the values from Flye with fixed circularisation:
+mean_comparisons_fixed <- data.frame(matrix(ncol = 2, nrow = 0))
+worst_comparisons_fixed <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(mean_comparisons_fixed) <- c("assembler", "identity")
+colnames(worst_comparisons_fixed) <- c("assembler", "identity")
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Unicycler hybrid", 10), identity = unicycler_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Flye", 10), identity = flye_fixed_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Flye+Pilon", 10), identity = flye_fixed_pilon_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Trycycler", 10), identity = trycycler_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Trycycler+Pilon", 10), identity = trycycler_pilon_mean))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Unicycler hybrid", 10), identity = unicycler_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Flye", 10), identity = flye_fixed_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Flye+Pilon", 10), identity = flye_fixed_pilon_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Trycycler", 10), identity = trycycler_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Trycycler+Pilon", 10), identity = trycycler_pilon_worst))
+mean_comparisons_fixed$identity <- as.numeric(as.character(mean_comparisons_fixed$identity))
+worst_comparisons_fixed$identity <- as.numeric(as.character(worst_comparisons_fixed$identity))
+mean_comparisons_fixed$distance <- 1.0 - mean_comparisons_fixed$identity
+worst_comparisons_fixed$distance <- 1.0 - worst_comparisons_fixed$identity
+
+# Now build versions for the long-read-only assemblers:
+mean_comparisons_long <- data.frame(matrix(ncol = 2, nrow = 0))
+worst_comparisons_long <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(mean_comparisons_long) <- c("assembler", "identity")
+colnames(worst_comparisons_long) <- c("assembler", "identity")
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Miniasm", 10), identity = miniasm_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Miniasm+Pilon", 10), identity = miniasm_pilon_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Raven", 10), identity = raven_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Raven+Pilon", 10), identity = raven_pilon_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Flye", 10), identity = flye_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Flye+Pilon", 10), identity = flye_pilon_mean))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Miniasm", 10), identity = miniasm_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Miniasm+Pilon", 10), identity = miniasm_pilon_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Raven", 10), identity = raven_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Raven+Pilon", 10), identity = raven_pilon_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Flye", 10), identity = flye_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Flye+Pilon", 10), identity = flye_pilon_worst))
+mean_comparisons_long$identity <- as.numeric(as.character(mean_comparisons_long$identity))
+worst_comparisons_long$identity <- as.numeric(as.character(worst_comparisons_long$identity))
+mean_comparisons_long$distance <- 1.0 - mean_comparisons_long$identity
+worst_comparisons_long$distance <- 1.0 - worst_comparisons_long$identity
+```
+```{r}
+colour_scale <- scale_fill_manual("Assembler",
+                    values = c("#e9695f",          "#e89133", "#7b4000",       "#e5e82a", "#747600",     "#1ee46b", "#007700",    "#91c5ff",   "#005ccc"),
+                    limits = c("Unicycler hybrid", "Miniasm", "Miniasm+Pilon", "Raven",   "Raven+Pilon", "Flye",    "Flye+Pilon", "Trycycler", "Trycycler+Pilon"))
+```
+
+
+```{r mean_comparisons, fig.width = 4, fig.height = 3, useDingbats = FALSE}
+y_trans_one_num <- function(x) {
+  if (is.na(x)) {return(x)}
+  if (x == 1.0) {
+    return(0.0)
+  } else {
+    return(-log(((1.0 - x)+1e-7)/1e-7)/2.3026)
+  }
+}
+y_trans <- Vectorize(y_trans_one_num)
+mean_comparisons$identity_trans <- y_trans(mean_comparisons$identity)
+mean_comparisons_fixed$identity_trans <- y_trans(mean_comparisons_fixed$identity)
+mean_comparisons_long$identity_trans <- y_trans(mean_comparisons_long$identity)
+
+q_score <- function(x) {
+  q <- -10.0 * log10(1-x)
+  q_string <- format(q, digits=0, nsmall=0)
+  return(paste("Q", q_string, sep=""))
+}
+
+unicycler_mean <- q_score(mean(filter(mean_comparisons, assembler=="Unicycler hybrid")$identity))
+flye_mean <- q_score(mean(filter(mean_comparisons, assembler=="Flye")$identity))
+flye_pilon_mean <- q_score(mean(filter(mean_comparisons, assembler=="Flye+Pilon")$identity))
+trycycler_mean <- q_score(mean(filter(mean_comparisons, assembler=="Trycycler")$identity))
+trycycler_pilon_mean <- q_score(mean(filter(mean_comparisons, assembler=="Trycycler+Pilon")$identity))
+
+mean_plot <- ggplot(mean_comparisons, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.22) +
+  annotate("text", x=1, y=0.52, label=unicycler_mean) +
+  annotate("text", x=2, y=0.52, label=flye_mean) +
+  annotate("text", x=3, y=0.52, label=flye_pilon_mean) +
+  annotate("text", x=4, y=0.52, label=trycycler_mean) +
+  annotate("text", x=5, y=0.52, label=trycycler_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("90%", "99%", "99.9%", "99.99%", "99.999%", "99.9999%", "100%"),
+                     breaks = y_trans(c(0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = c(y_trans(0.9), 0.7)) +
+  labs(title = "Assembly vs reference: mean identity", x = NULL, y = NULL) +
+  colour_scale
+
+unicycler_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Unicycler hybrid")$identity))
+flye_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Flye")$identity))
+flye_pilon_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Flye+Pilon")$identity))
+trycycler_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Trycycler")$identity))
+trycycler_pilon_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Trycycler+Pilon")$identity))
+
+mean_plot_fixed <- ggplot(mean_comparisons_fixed, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.22) +
+  annotate("text", x=1, y=0.52, label=unicycler_mean) +
+  annotate("text", x=2, y=0.52, label=flye_mean) +
+  annotate("text", x=3, y=0.52, label=flye_pilon_mean) +
+  annotate("text", x=4, y=0.52, label=trycycler_mean) +
+  annotate("text", x=5, y=0.52, label=trycycler_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("90%", "99%", "99.9%", "99.99%", "99.999%", "99.9999%", "100%"),
+                     breaks = y_trans(c(0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = c(y_trans(0.9), 0.7)) +
+  labs(title = "Assembly vs reference: mean identity", x = NULL, y = NULL) +
+  colour_scale
+
+miniasm_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Miniasm")$identity))
+miniasm_pilon_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Miniasm+Pilon")$identity))
+raven_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Raven")$identity))
+raven_pilon_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Raven+Pilon")$identity))
+flye_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Flye")$identity))
+flye_pilon_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Flye+Pilon")$identity))
+
+mean_plot_long <- ggplot(mean_comparisons_long, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.22) +
+  annotate("text", x=1, y=0.52, label=miniasm_mean) +
+  annotate("text", x=2, y=0.52, label=miniasm_pilon_mean) +
+  annotate("text", x=3, y=0.52, label=raven_mean) +
+  annotate("text", x=4, y=0.52, label=raven_pilon_mean) +
+  annotate("text", x=5, y=0.52, label=flye_mean) +
+  annotate("text", x=6, y=0.52, label=flye_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("90%", "99%", "99.9%", "99.99%", "99.999%", "99.9999%", "100%"),
+                     breaks = y_trans(c(0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = c(y_trans(0.9), 0.7)) +
+  labs(title = "Assembly vs reference: mean identity", x = NULL, y = NULL) +
+  colour_scale
+
+# mean_plot
+# mean_plot_fixed
+# mean_plot_long
+```
+
+```{r worst_comparisons, fig.width = 4.7, fig.height = 4, useDingbats = FALSE}
+y_trans_one_num <- function(x) {
+  if (is.na(x)) {return(x)}
+  if (x >= 0.9) {
+    return(x)
+  } else if (x >= 0.8) {
+    return(0.89)
+  } else if (x >= 0.5) {
+    return(0.88)
+  } else {
+    return(0.87)
+  }
+}
+y_trans <- Vectorize(y_trans_one_num)
+worst_comparisons$identity_trans <- y_trans(worst_comparisons$identity)
+worst_comparisons_fixed$identity_trans <- y_trans(worst_comparisons_fixed$identity)
+worst_comparisons_long$identity_trans <- y_trans(worst_comparisons_long$identity)
+
+unicycler_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Unicycler hybrid")$identity), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Flye")$identity), digits=1, nsmall=1), "%", sep="")
+flye_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Flye+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Trycycler")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Trycycler+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+
+worst_plot <- ggplot(worst_comparisons, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.0048) +
+  annotate("text", x=1, y=1.012, label=unicycler_mean) +
+  annotate("text", x=2, y=1.012, label=flye_mean) +
+  annotate("text", x=3, y=1.012, label=flye_pilon_mean) +
+  annotate("text", x=4, y=1.012, label=trycycler_mean) +
+  annotate("text", x=5, y=1.012, label=trycycler_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("0–49%", "50–79%", "80–89%", "90%", "91%", "92%", "93%", "94%", "95%", "96%", "97%", "98%", "99%", "100%"),
+                     breaks = y_trans(c(0.0, 0.5, 0.8, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = y_trans(c(0.0, 1.016))) +
+  labs(title = "Assembly vs reference: worst 100 bp identity", x = NULL, y = NULL) +
+  colour_scale
+
+unicycler_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Unicycler hybrid")$identity), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Flye")$identity), digits=1, nsmall=1), "%", sep="")
+flye_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Flye+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Trycycler")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Trycycler+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+
+worst_plot_fixed <- ggplot(worst_comparisons_fixed, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.0048) +
+  annotate("text", x=1, y=1.012, label=unicycler_mean) +
+  annotate("text", x=2, y=1.012, label=flye_mean) +
+  annotate("text", x=3, y=1.012, label=flye_pilon_mean) +
+  annotate("text", x=4, y=1.012, label=trycycler_mean) +
+  annotate("text", x=5, y=1.012, label=trycycler_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("0–49%", "50–79%", "80–89%", "90%", "91%", "92%", "93%", "94%", "95%", "96%", "97%", "98%", "99%", "100%"),
+                     breaks = y_trans(c(0.0, 0.5, 0.8, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = y_trans(c(0.0, 1.016))) +
+  labs(title = "Assembly vs reference: worst 100 bp identity", x = NULL, y = NULL) +
+  colour_scale
+
+miniasm_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Miniasm")$identity), digits=1, nsmall=1), "%", sep="")
+miniasm_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Miniasm+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+raven_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Raven")$identity), digits=1, nsmall=1), "%", sep="")
+raven_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Raven+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Flye")$identity), digits=1, nsmall=1), "%", sep="")
+flye_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Flye+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+
+worst_plot_long <- ggplot(worst_comparisons_long, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.0056) +
+  annotate("text", x=1, y=1.012, label=miniasm_mean) +
+  annotate("text", x=2, y=1.012, label=miniasm_pilon_mean) +
+  annotate("text", x=3, y=1.012, label=raven_mean) +
+  annotate("text", x=4, y=1.012, label=raven_pilon_mean) +
+  annotate("text", x=5, y=1.012, label=flye_mean) +
+  annotate("text", x=6, y=1.012, label=flye_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("0–49%", "50–79%", "80–89%", "90%", "91%", "92%", "93%", "94%", "95%", "96%", "97%", "98%", "99%", "100%"),
+                     breaks = y_trans(c(0.0, 0.5, 0.8, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = y_trans(c(0.0, 1.016))) +
+  labs(title = "Assembly vs reference: worst 100 bp identity", x = NULL, y = NULL) +
+  colour_scale
+
+# worst_plot
+# worst_plot_fixed
+# worst_plot_long
+```
+
+## Combined plots
+
+```{r combined_plots, fig.width = 9.5, fig.height = 3.75, useDingbats = FALSE}
+plot_grid(mean_plot, worst_plot, nrow = 1, ncol = 2, align="v")
+plot_grid(mean_plot_fixed, worst_plot_fixed, nrow = 1, ncol = 2, align="v")
+plot_grid(mean_plot_long, worst_plot_long, nrow = 1, ncol = 2, align="v")
+```

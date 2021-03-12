@@ -1,0 +1,620 @@
+---
+title: "Trycycler real read tests"
+date: "2020-12-18"
+author: "Ryan Wick"
+output:
+  html_document:
+    pandoc_args: ["+RTS", "-K64m", "-RTS", "--self-contained",]
+    df_print: paged
+    keep_md: false
+    toc: true
+    toc_float: true
+---
+
+This document contains the R code used to generate plots for the real read tests part of my Trycycler paper.
+
+This script is licensed under a Creative Commons Attribution 4.0 International License. You should have received a copy of the license along with this work. If not, see <http://creativecommons.org/licenses/by/4.0/>.
+
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(cowplot)
+library(scales)
+```
+
+
+## Output settings
+
+```{r}
+opts_chunk$set(fig.width=8, fig.height=5, dpi=300, fig.path='./plots/', echo=TRUE, dev=c('png','pdf'), warning=FALSE, message=FALSE)
+pdf.options(useDingbats = FALSE)
+```
+
+
+## Load data
+
+Load the assembly comparisons:
+```{r}
+excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/real_read_tests/table_s2_real_read_results.xlsx"
+
+comparisons <- read_excel(excel_filename, sheet = "Comparisons", col_names = FALSE)
+
+unicycler_mean <- pull(comparisons[3:8,2])
+unicycler_worst <- pull(comparisons[3:8,3])
+
+miniasm_mean <- pull(comparisons[3:8,4])
+miniasm_worst <- pull(comparisons[3:8,5])
+miniasm_medaka_mean <- pull(comparisons[3:8,6])
+miniasm_medaka_worst <- pull(comparisons[3:8,7])
+miniasm_medaka_pilon_mean <- pull(comparisons[3:8,8])
+miniasm_medaka_pilon_worst <- pull(comparisons[3:8,9])
+
+raven_mean <- pull(comparisons[3:8,10])
+raven_worst <- pull(comparisons[3:8,11])
+raven_medaka_mean <- pull(comparisons[3:8,12])
+raven_medaka_worst <- pull(comparisons[3:8,13])
+raven_medaka_pilon_mean <- pull(comparisons[3:8,14])
+raven_medaka_pilon_worst <- pull(comparisons[3:8,15])
+
+# These are the unfixed Flye values:
+flye_mean <- pull(comparisons[3:8,16])
+flye_worst <- pull(comparisons[3:8,17])
+flye_medaka_mean <- pull(comparisons[3:8,18])
+flye_medaka_worst <- pull(comparisons[3:8,19])
+flye_medaka_pilon_mean <- pull(comparisons[3:8,20])
+flye_medaka_pilon_worst <- pull(comparisons[3:8,21])
+
+# And these are values for Flye assemblies with manually fixed circularisation:
+flye_fixed_mean <- pull(comparisons[3:8,22])
+flye_fixed_worst <- pull(comparisons[3:8,23])
+flye_fixed_medaka_mean <- pull(comparisons[3:8,24])
+flye_fixed_medaka_worst <- pull(comparisons[3:8,25])
+flye_fixed_medaka_pilon_mean <- pull(comparisons[3:8,26])
+flye_fixed_medaka_pilon_worst <- pull(comparisons[3:8,27])
+
+trycycler_mean <- pull(comparisons[3:8,28])
+trycycler_worst <- pull(comparisons[3:8,29])
+trycycler_medaka_mean <- pull(comparisons[3:8,30])
+trycycler_medaka_worst <- pull(comparisons[3:8,31])
+trycycler_medaka_pilon_mean <- pull(comparisons[3:8,32])
+trycycler_medaka_pilon_worst <- pull(comparisons[3:8,33])
+
+mean_comparisons <- data.frame(matrix(ncol = 2, nrow = 0))
+worst_comparisons <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(mean_comparisons) <- c("assembler", "identity")
+colnames(worst_comparisons) <- c("assembler", "identity")
+
+# Build data frames of mean/worst comparisons:
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Unicycler hybrid", 6), identity = unicycler_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Flye", 6), identity = flye_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Flye+Medaka", 6), identity = flye_medaka_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), identity = flye_medaka_pilon_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Trycycler", 6), identity = trycycler_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Trycycler+Medaka", 6), identity = trycycler_medaka_mean))
+mean_comparisons <- rbind(mean_comparisons, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), identity = trycycler_medaka_pilon_mean))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Unicycler hybrid", 6), identity = unicycler_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Flye", 6), identity = flye_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Flye+Medaka", 6), identity = flye_medaka_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), identity = flye_medaka_pilon_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Trycycler", 6), identity = trycycler_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Trycycler+Medaka", 6), identity = trycycler_medaka_worst))
+worst_comparisons <- rbind(worst_comparisons, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), identity = trycycler_medaka_pilon_worst))
+mean_comparisons$identity <- as.numeric(as.character(mean_comparisons$identity))
+worst_comparisons$identity <- as.numeric(as.character(worst_comparisons$identity))
+mean_comparisons$distance <- 1.0 - mean_comparisons$identity
+worst_comparisons$distance <- 1.0 - worst_comparisons$identity
+
+# Now build them again using the values from Flye with fixed circularisation:
+mean_comparisons_fixed <- data.frame(matrix(ncol = 2, nrow = 0))
+worst_comparisons_fixed <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(mean_comparisons_fixed) <- c("assembler", "identity")
+colnames(worst_comparisons_fixed) <- c("assembler", "identity")
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Unicycler hybrid", 6), identity = unicycler_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Flye", 6), identity = flye_fixed_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Flye+Medaka", 6), identity = flye_fixed_medaka_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), identity = flye_fixed_medaka_pilon_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Trycycler", 6), identity = trycycler_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Trycycler+Medaka", 6), identity = trycycler_medaka_mean))
+mean_comparisons_fixed <- rbind(mean_comparisons_fixed, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), identity = trycycler_medaka_pilon_mean))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Unicycler hybrid", 6), identity = unicycler_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Flye", 6), identity = flye_fixed_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Flye+Medaka", 6), identity = flye_fixed_medaka_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), identity = flye_fixed_medaka_pilon_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Trycycler", 6), identity = trycycler_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Trycycler+Medaka", 6), identity = trycycler_medaka_worst))
+worst_comparisons_fixed <- rbind(worst_comparisons_fixed, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), identity = trycycler_medaka_pilon_worst))
+mean_comparisons_fixed$identity <- as.numeric(as.character(mean_comparisons_fixed$identity))
+worst_comparisons_fixed$identity <- as.numeric(as.character(worst_comparisons_fixed$identity))
+mean_comparisons_fixed$distance <- 1.0 - mean_comparisons_fixed$identity
+worst_comparisons_fixed$distance <- 1.0 - worst_comparisons_fixed$identity
+
+# Now build versions for the long-read-only assemblers:
+mean_comparisons_long <- data.frame(matrix(ncol = 2, nrow = 0))
+worst_comparisons_long <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(mean_comparisons_long) <- c("assembler", "identity")
+colnames(worst_comparisons_long) <- c("assembler", "identity")
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Miniasm", 6), identity = miniasm_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Miniasm+Medaka", 6), identity = miniasm_medaka_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Miniasm+Medaka+Pilon", 6), identity = miniasm_medaka_pilon_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Raven", 6), identity = raven_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Raven+Medaka", 6), identity = raven_medaka_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Raven+Medaka+Pilon", 6), identity = raven_medaka_pilon_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Flye", 6), identity = flye_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Flye+Medaka", 6), identity = flye_medaka_mean))
+mean_comparisons_long <- rbind(mean_comparisons_long, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), identity = flye_medaka_pilon_mean))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Miniasm", 6), identity = miniasm_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Miniasm+Medaka", 6), identity = miniasm_medaka_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Miniasm+Medaka+Pilon", 6), identity = miniasm_medaka_pilon_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Raven", 6), identity = raven_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Raven+Medaka", 6), identity = raven_medaka_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Raven+Medaka+Pilon", 6), identity = raven_medaka_pilon_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Flye", 6), identity = flye_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Flye+Medaka", 6), identity = flye_medaka_worst))
+worst_comparisons_long <- rbind(worst_comparisons_long, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), identity = flye_medaka_pilon_worst))
+mean_comparisons_long$identity <- as.numeric(as.character(mean_comparisons_long$identity))
+worst_comparisons_long$identity <- as.numeric(as.character(worst_comparisons_long$identity))
+mean_comparisons_long$distance <- 1.0 - mean_comparisons_long$identity
+worst_comparisons_long$distance <- 1.0 - worst_comparisons_long$identity
+mean_comparisons_long <- na.omit(mean_comparisons_long)
+worst_comparisons_long <- na.omit(worst_comparisons_long)
+```
+
+
+
+
+Load the ALE scores:
+```{r}
+excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/real_read_tests/table_s2_real_read_results.xlsx"
+
+ale_scores <- read_excel(excel_filename, sheet = "ALE z-scores", col_names = FALSE)
+unicycler_ale <- pull(ale_scores[2:13,2])
+flye_fixed_ale <- pull(ale_scores[2:13,3])
+flye_medaka_fixed_ale <- pull(ale_scores[2:13,4])
+flye_medaka_pilon_fixed_ale <- pull(ale_scores[2:13,5])
+trycycler_ale <- pull(ale_scores[2:13,6])
+trycycler_medaka_ale <- pull(ale_scores[2:13,7])
+trycycler_medaka_pilon_ale <- pull(ale_scores[2:13,8])
+ale_z_scores <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(ale_z_scores) <- c("assembler", "ale")
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Unicycler hybrid", 6), ale = unicycler_ale))
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Flye", 6), ale = flye_fixed_ale))
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Flye+Medaka", 6), ale = flye_medaka_fixed_ale))
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), ale = flye_medaka_pilon_fixed_ale))
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Trycycler", 6), ale = trycycler_ale))
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Trycycler+Medaka", 6), ale = trycycler_medaka_ale))
+ale_z_scores <- rbind(ale_z_scores, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), ale = trycycler_medaka_pilon_ale))
+ale_z_scores$ale <- as.numeric(as.character(ale_z_scores$ale))
+
+ale_scores <- read_excel(excel_filename, sheet = "ALE z-scores (fixed circ)", col_names = FALSE)
+unicycler_ale <- pull(ale_scores[2:13,2])
+flye_fixed_ale <- pull(ale_scores[2:13,3])
+flye_medaka_fixed_ale <- pull(ale_scores[2:13,4])
+flye_medaka_pilon_fixed_ale <- pull(ale_scores[2:13,5])
+trycycler_ale <- pull(ale_scores[2:13,6])
+trycycler_medaka_ale <- pull(ale_scores[2:13,7])
+trycycler_medaka_pilon_ale <- pull(ale_scores[2:13,8])
+ale_z_scores_fixed <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(ale_z_scores_fixed) <- c("assembler", "ale")
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Unicycler hybrid", 6), ale = unicycler_ale))
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Flye", 6), ale = flye_fixed_ale))
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Flye+Medaka", 6), ale = flye_medaka_fixed_ale))
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), ale = flye_medaka_pilon_fixed_ale))
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Trycycler", 6), ale = trycycler_ale))
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Trycycler+Medaka", 6), ale = trycycler_medaka_ale))
+ale_z_scores_fixed <- rbind(ale_z_scores_fixed, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), ale = trycycler_medaka_pilon_ale))
+ale_z_scores_fixed$ale <- as.numeric(as.character(ale_z_scores_fixed$ale))
+```
+
+
+
+
+Load the ideel scores:
+```{r}
+excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/real_read_tests/table_s2_real_read_results.xlsx"
+
+ideel <- read_excel(excel_filename, sheet = "IDEEL results", col_names = FALSE)
+unicycler_ale <- pull(ideel[2:13,2])
+flye_fixed_ale <- pull(ideel[2:13,3])
+flye_medaka_fixed_ale <- pull(ideel[2:13,4])
+flye_medaka_pilon_fixed_ale <- pull(ideel[2:13,5])
+trycycler_ale <- pull(ideel[2:13,6])
+trycycler_medaka_ale <- pull(ideel[2:13,7])
+trycycler_medaka_pilon_ale <- pull(ideel[2:13,8])
+ideel_results <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(ideel_results) <- c("assembler", "result")
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Unicycler hybrid", 6), result = unicycler_ale))
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Flye", 6), result = flye_fixed_ale))
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Flye+Medaka", 6), result = flye_medaka_fixed_ale))
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), result = flye_medaka_pilon_fixed_ale))
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Trycycler", 6), result = trycycler_ale))
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Trycycler+Medaka", 6), result = trycycler_medaka_ale))
+ideel_results <- rbind(ideel_results, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), result = trycycler_medaka_pilon_ale))
+ideel_results$result <- as.numeric(as.character(ideel_results$result))
+
+ideel <- read_excel(excel_filename, sheet = "IDEEL results (fixed circ)", col_names = FALSE)
+unicycler_ale <- pull(ideel[2:13,2])
+flye_fixed_ale <- pull(ideel[2:13,3])
+flye_medaka_fixed_ale <- pull(ideel[2:13,4])
+flye_medaka_pilon_fixed_ale <- pull(ideel[2:13,5])
+trycycler_ale <- pull(ideel[2:13,6])
+trycycler_medaka_ale <- pull(ideel[2:13,7])
+trycycler_medaka_pilon_ale <- pull(ideel[2:13,8])
+ideel_results_fixed <- data.frame(matrix(ncol = 2, nrow = 0))
+colnames(ideel_results_fixed) <- c("assembler", "result")
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Unicycler hybrid", 6), result = unicycler_ale))
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Flye", 6), result = flye_fixed_ale))
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Flye+Medaka", 6), result = flye_medaka_fixed_ale))
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Flye+Medaka+Pilon", 6), result = flye_medaka_pilon_fixed_ale))
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Trycycler", 6), result = trycycler_ale))
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Trycycler+Medaka", 6), result = trycycler_medaka_ale))
+ideel_results_fixed <- rbind(ideel_results_fixed, data.frame(assembler = rep("Trycycler+Medaka+Pilon", 6), result = trycycler_medaka_pilon_ale))
+ideel_results_fixed$result <- as.numeric(as.character(ideel_results_fixed$result))
+```
+
+
+## Comparison plots
+
+```{r}
+colour_scale <- scale_fill_manual("Assembler",
+                    values = c("#e9695f",          "#e89133", "#ad5e09",        "#7b4000",              "#e5e82a", "#afb203",      "#747600",            "#1ee46b", "#00ac22",     "#007700",           "#91c5ff",   "#4f8ffa",          "#005ccc"),
+                    limits = c("Unicycler hybrid", "Miniasm", "Miniasm+Medaka", "Miniasm+Medaka+Pilon", "Raven",   "Raven+Medaka", "Raven+Medaka+Pilon", "Flye",    "Flye+Medaka", "Flye+Medaka+Pilon", "Trycycler", "Trycycler+Medaka", "Trycycler+Medaka+Pilon"))
+```
+
+```{r mean_comparisons, fig.width = 5, fig.height = 4, useDingbats = FALSE}
+y_trans_one_num <- function(x) {
+  if (is.na(x)) {return(x)}
+  if (x == 1.0) {
+    return(0.0)
+  } else {
+    return(-log(((1.0 - x)+1e-7)/1e-7)/2.3026)
+  }
+}
+y_trans <- Vectorize(y_trans_one_num)
+mean_comparisons$identity_trans <- y_trans(mean_comparisons$identity)
+mean_comparisons_fixed$identity_trans <- y_trans(mean_comparisons_fixed$identity)
+mean_comparisons_long$identity_trans <- y_trans(mean_comparisons_long$identity)
+
+q_score <- function(x) {
+  q <- -10.0 * log10(1-x)
+  q_string <- format(q, digits=0, nsmall=0)
+  return(paste("Q", q_string, sep=""))
+}
+
+unicycler_mean <- q_score(mean(filter(mean_comparisons, assembler=="Unicycler hybrid")$identity))
+flye_mean <- q_score(mean(filter(mean_comparisons, assembler=="Flye")$identity))
+flye_medaka_mean <- q_score(mean(filter(mean_comparisons, assembler=="Flye+Medaka")$identity))
+flye_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons, assembler=="Flye+Medaka+Pilon")$identity))
+trycycler_mean <- q_score(mean(filter(mean_comparisons, assembler=="Trycycler")$identity))
+trycycler_medaka_mean <- q_score(mean(filter(mean_comparisons, assembler=="Trycycler+Medaka")$identity))
+trycycler_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons, assembler=="Trycycler+Medaka+Pilon")$identity))
+
+mean_plot <- ggplot(mean_comparisons, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.24) +
+  annotate("text", x=1, y=0.45, label=unicycler_mean) +
+  annotate("text", x=2, y=0.45, label=flye_mean) +
+  annotate("text", x=3, y=0.45, label=flye_medaka_mean) +
+  annotate("text", x=4, y=0.45, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=0.45, label=trycycler_mean) +
+  annotate("text", x=6, y=0.45, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=0.45, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("99%", "99.9%", "99.99%", "99.999%", "99.9999%", "100%"),
+                     breaks = y_trans(c(0.99, 0.999, 0.9999, 0.99999, 0.999999, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = c(y_trans(0.99), 0.6)) +
+  labs(title = "Ligation vs rapid assembly: mean identity", x = NULL, y = NULL) +
+  colour_scale
+
+unicycler_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Unicycler hybrid")$identity))
+flye_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Flye")$identity))
+flye_medaka_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Flye+Medaka")$identity))
+flye_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Flye+Medaka+Pilon")$identity))
+trycycler_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Trycycler")$identity))
+trycycler_medaka_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Trycycler+Medaka")$identity))
+trycycler_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons_fixed, assembler=="Trycycler+Medaka+Pilon")$identity))
+
+mean_plot_fixed <- ggplot(mean_comparisons_fixed, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.24) +
+  annotate("text", x=1, y=0.45, label=unicycler_mean) +
+  annotate("text", x=2, y=0.45, label=flye_mean) +
+  annotate("text", x=3, y=0.45, label=flye_medaka_mean) +
+  annotate("text", x=4, y=0.45, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=0.45, label=trycycler_mean) +
+  annotate("text", x=6, y=0.45, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=0.45, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("99%", "99.9%", "99.99%", "99.999%", "99.9999%", "100%"),
+                     breaks = y_trans(c(0.99, 0.999, 0.9999, 0.99999, 0.999999, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = c(y_trans(0.99), 0.6)) +
+  labs(title = "Ligation vs rapid assembly: mean identity", x = NULL, y = NULL) +
+  colour_scale
+
+
+miniasm_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Miniasm")$identity))
+miniasm_medaka_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Miniasm+Medaka")$identity))
+miniasm_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Miniasm+Medaka+Pilon")$identity))
+raven_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Raven")$identity))
+raven_medaka_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Raven+Medaka")$identity))
+raven_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Raven+Medaka+Pilon")$identity))
+flye_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Flye")$identity))
+flye_medaka_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Flye+Medaka")$identity))
+flye_medaka_pilon_mean <- q_score(mean(filter(mean_comparisons_long, assembler=="Flye+Medaka+Pilon")$identity))
+
+mean_plot_long <- ggplot(mean_comparisons_long, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.24) +
+  annotate("text", x=1, y=0.45, label=miniasm_mean) +
+  annotate("text", x=2, y=0.45, label=miniasm_medaka_mean) +
+  annotate("text", x=3, y=0.45, label=miniasm_medaka_pilon_mean) +
+  annotate("text", x=4, y=0.45, label=raven_mean) +
+  annotate("text", x=5, y=0.45, label=raven_medaka_mean) +
+  annotate("text", x=6, y=0.45, label=raven_medaka_pilon_mean) +
+  annotate("text", x=7, y=0.45, label=flye_mean) +
+  annotate("text", x=8, y=0.45, label=flye_medaka_mean) +
+  annotate("text", x=9, y=0.45, label=flye_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("99%", "99.9%", "99.99%", "99.999%", "99.9999%", "100%"),
+                     breaks = y_trans(c(0.99, 0.999, 0.9999, 0.99999, 0.999999, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = c(y_trans(0.99), 0.6)) +
+  labs(title = "Ligation vs rapid assembly: mean identity", x = NULL, y = NULL) +
+  colour_scale
+
+# mean_plot
+# mean_plot_fixed
+# mean_plot_long
+```
+
+```{r worst_comparisons, fig.width = 5, fig.height = 4, useDingbats = FALSE}
+y_trans_one_num <- function(x) {
+  if (is.na(x)) {return(x)}
+  if (x >= 0.9) {
+    return(x)
+  } else if (x >= 0.8) {
+    return(0.89)
+  } else if (x >= 0.5) {
+    return(0.88)
+  } else {
+    return(0.87)
+  }
+}
+y_trans <- Vectorize(y_trans_one_num)
+worst_comparisons$identity_trans <- y_trans(worst_comparisons$identity)
+worst_comparisons_fixed$identity_trans <- y_trans(worst_comparisons_fixed$identity)
+worst_comparisons_long$identity_trans <- y_trans(worst_comparisons_long$identity)
+
+unicycler_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Unicycler hybrid")$identity), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Flye")$identity), digits=1, nsmall=1), "%", sep="")
+flye_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Flye+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+flye_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Flye+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Trycycler")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Trycycler+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons, assembler=="Trycycler+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+
+worst_plot <- ggplot(worst_comparisons, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.006) +
+  annotate("text", x=1, y=1.012, label=unicycler_mean) +
+  annotate("text", x=2, y=1.012, label=flye_mean) +
+  annotate("text", x=3, y=1.012, label=flye_medaka_mean) +
+  annotate("text", x=4, y=1.012, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=1.012, label=trycycler_mean) +
+  annotate("text", x=6, y=1.012, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=1.012, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("0–49%", "50–79%", "80–89%", "90%", "91%", "92%", "93%", "94%", "95%", "96%", "97%", "98%", "99%", "100%"),
+                     breaks = y_trans(c(0.0, 0.5, 0.8, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = y_trans(c(0.0, 1.016))) +
+  labs(title = "Ligation vs rapid assembly: worst 100 bp identity", x = NULL, y = NULL) +
+  colour_scale
+
+unicycler_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Unicycler hybrid")$identity), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Flye")$identity), digits=1, nsmall=1), "%", sep="")
+flye_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Flye+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+flye_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Flye+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Trycycler")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Trycycler+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_fixed, assembler=="Trycycler+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+
+worst_plot_fixed <- ggplot(worst_comparisons_fixed, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.006) +
+  annotate("text", x=1, y=1.012, label=unicycler_mean) +
+  annotate("text", x=2, y=1.012, label=flye_mean) +
+  annotate("text", x=3, y=1.012, label=flye_medaka_mean) +
+  annotate("text", x=4, y=1.012, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=1.012, label=trycycler_mean) +
+  annotate("text", x=6, y=1.012, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=1.012, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("0–49%", "50–79%", "80–89%", "90%", "91%", "92%", "93%", "94%", "95%", "96%", "97%", "98%", "99%", "100%"),
+                     breaks = y_trans(c(0.0, 0.5, 0.8, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = y_trans(c(0.0, 1.016))) +
+  labs(title = "Ligation vs rapid assembly: worst 100 bp identity", x = NULL, y = NULL) +
+  colour_scale
+
+miniasm_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Miniasm")$identity), digits=1, nsmall=1), "%", sep="")
+miniasm_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Miniasm+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+miniasm_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Miniasm+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+raven_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Raven")$identity), digits=1, nsmall=1), "%", sep="")
+raven_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Raven+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+raven_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Raven+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Flye")$identity), digits=1, nsmall=1), "%", sep="")
+flye_medaka_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Flye+Medaka")$identity), digits=1, nsmall=1), "%", sep="")
+flye_medaka_pilon_mean <- paste(format(100 * mean(filter(worst_comparisons_long, assembler=="Flye+Medaka+Pilon")$identity), digits=1, nsmall=1), "%", sep="")
+
+worst_plot_long <- ggplot(worst_comparisons_long, aes(x = assembler, y = identity_trans, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.006) +
+  annotate("text", x=1, y=1.012, label=miniasm_mean) +
+  annotate("text", x=2, y=1.012, label=miniasm_medaka_mean) +
+  annotate("text", x=3, y=1.012, label=miniasm_medaka_pilon_mean) +
+  annotate("text", x=4, y=1.012, label=raven_mean) +
+  annotate("text", x=5, y=1.012, label=raven_medaka_mean) +
+  annotate("text", x=6, y=1.012, label=raven_medaka_pilon_mean) +
+  annotate("text", x=7, y=1.012, label=flye_mean) +
+  annotate("text", x=8, y=1.012, label=flye_medaka_mean) +
+  annotate("text", x=9, y=1.012, label=flye_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_y_continuous(labels = c("0–49%", "50–79%", "80–89%", "90%", "91%", "92%", "93%", "94%", "95%", "96%", "97%", "98%", "99%", "100%"),
+                     breaks = y_trans(c(0.0, 0.5, 0.8, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0)),
+                     minor_breaks = NULL) +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  coord_cartesian(ylim = y_trans(c(0.0, 1.016))) +
+  labs(title = "Ligation vs rapid assembly: worst 100 bp identity", x = NULL, y = NULL) +
+  colour_scale
+
+# worst_plot
+# worst_plot_fixed
+# worst_plot_long
+```
+
+
+
+## ALE score plots
+
+```{r ale_scores, fig.width = 5, fig.height = 4, useDingbats = FALSE}
+unicycler_mean <- format(mean(filter(ale_z_scores, assembler=="Unicycler hybrid")$ale), digits=3, nsmall=3)
+flye_mean <- format(mean(filter(ale_z_scores, assembler=="Flye")$ale), digits=3, nsmall=3)
+flye_medaka_mean <- format(mean(filter(ale_z_scores, assembler=="Flye+Medaka")$ale), digits=3, nsmall=3)
+flye_medaka_pilon_mean <- format(mean(filter(ale_z_scores, assembler=="Flye+Medaka+Pilon")$ale), digits=3, nsmall=3)
+trycycler_mean <- format(mean(filter(ale_z_scores, assembler=="Trycycler")$ale), digits=3, nsmall=3)
+trycycler_medaka_mean <- format(mean(filter(ale_z_scores, assembler=="Trycycler+Medaka")$ale), digits=3, nsmall=3)
+trycycler_medaka_pilon_mean <- format(mean(filter(ale_z_scores, assembler=="Trycycler+Medaka+Pilon")$ale), digits=3, nsmall=3)
+
+ale_plot <- ggplot(ale_z_scores, aes(x = assembler, y = ale, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.13) +
+  annotate("text", x=1, y=1.29, label=unicycler_mean) +
+  annotate("text", x=2, y=1.29, label=flye_mean) +
+  annotate("text", x=3, y=1.29, label=flye_medaka_mean) +
+  annotate("text", x=4, y=1.29, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=1.29, label=trycycler_mean) +
+  annotate("text", x=6, y=1.29, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=1.29, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  scale_y_continuous(breaks = seq(-2, 1, 1), minor_breaks = seq(-2, 1, 0.5)) +
+  labs(title = "ALE: z-scores", x = NULL, y = NULL) +
+  coord_cartesian(ylim=c(-2.6, 1.40)) +
+  colour_scale
+
+unicycler_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Unicycler hybrid")$ale), digits=3, nsmall=3)
+flye_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Flye")$ale), digits=3, nsmall=3)
+flye_medaka_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Flye+Medaka")$ale), digits=3, nsmall=3)
+flye_medaka_pilon_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Flye+Medaka+Pilon")$ale), digits=3, nsmall=3)
+trycycler_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Trycycler")$ale), digits=3, nsmall=3)
+trycycler_medaka_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Trycycler+Medaka")$ale), digits=3, nsmall=3)
+trycycler_medaka_pilon_mean <- format(mean(filter(ale_z_scores_fixed, assembler=="Trycycler+Medaka+Pilon")$ale), digits=3, nsmall=3)
+
+ale_plot_fixed <- ggplot(ale_z_scores_fixed, aes(x = assembler, y = ale, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.13) +
+  annotate("text", x=1, y=1.29, label=unicycler_mean) +
+  annotate("text", x=2, y=1.29, label=flye_mean) +
+  annotate("text", x=3, y=1.29, label=flye_medaka_mean) +
+  annotate("text", x=4, y=1.29, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=1.29, label=trycycler_mean) +
+  annotate("text", x=6, y=1.29, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=1.29, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  scale_y_continuous(breaks = seq(-2, 1, 1), minor_breaks = seq(-2, 1, 0.5)) +
+  labs(title = "ALE: z-scores", x = NULL, y = NULL) +
+  coord_cartesian(ylim=c(-2.6, 1.40)) +
+  colour_scale
+
+# ale_plot
+# ale_plot_fixed
+```
+
+
+
+## IDEEL result plots
+
+```{r ideel_results, fig.width = 5, fig.height = 4, useDingbats = FALSE}
+unicycler_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Unicycler hybrid")$result), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Flye")$result), digits=1, nsmall=1), "%", sep="")
+flye_medaka_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Flye+Medaka")$result), digits=1, nsmall=1), "%", sep="")
+flye_medaka_pilon_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Flye+Medaka+Pilon")$result), digits=1, nsmall=1), "%", sep="")
+trycycler_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Trycycler")$result), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Trycycler+Medaka")$result), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_pilon_mean <- paste(format(100 * mean(filter(ideel_results, assembler=="Trycycler+Medaka+Pilon")$result), digits=1, nsmall=1), "%", sep="")
+
+ideel_plot <- ggplot(ideel_results, aes(x = assembler, y = result, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.011, dotsize=1.15) +
+  annotate("text", x=1, y=1.03, label=unicycler_mean) +
+  annotate("text", x=2, y=1.03, label=flye_mean) +
+  annotate("text", x=3, y=1.03, label=flye_medaka_mean) +
+  annotate("text", x=4, y=1.03, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=1.03, label=trycycler_mean) +
+  annotate("text", x=6, y=1.03, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=1.03, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  scale_y_continuous(labels = c("60%", "70%", "80%", "90%", "100%"),
+                     breaks = c(0.6, 0.7, 0.8, 0.9, 1.0),
+                     minor_breaks = seq(0.6, 1.0, 0.05)) +
+  labs(title = "Ideel: hits ≥95% coverage", x = NULL, y = NULL) +
+  coord_cartesian(ylim=c(0.65, 1.04)) +
+  colour_scale
+
+unicycler_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Unicycler hybrid")$result), digits=1, nsmall=1), "%", sep="")
+flye_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Flye")$result), digits=1, nsmall=1), "%", sep="")
+flye_medaka_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Flye+Medaka")$result), digits=1, nsmall=1), "%", sep="")
+flye_medaka_pilon_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Flye+Medaka+Pilon")$result), digits=1, nsmall=1), "%", sep="")
+trycycler_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Trycycler")$result), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Trycycler+Medaka")$result), digits=1, nsmall=1), "%", sep="")
+trycycler_medaka_pilon_mean <- paste(format(100 * mean(filter(ideel_results_fixed, assembler=="Trycycler+Medaka+Pilon")$result), digits=1, nsmall=1), "%", sep="")
+
+ideel_plot_fixed <- ggplot(ideel_results_fixed, aes(x = assembler, y = result, fill = assembler)) + 
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.011, dotsize=1.15) +
+  annotate("text", x=1, y=1.03, label=unicycler_mean) +
+  annotate("text", x=2, y=1.03, label=flye_mean) +
+  annotate("text", x=3, y=1.03, label=flye_medaka_mean) +
+  annotate("text", x=4, y=1.03, label=flye_medaka_pilon_mean) +
+  annotate("text", x=5, y=1.03, label=trycycler_mean) +
+  annotate("text", x=6, y=1.03, label=trycycler_medaka_mean) +
+  annotate("text", x=7, y=1.03, label=trycycler_medaka_pilon_mean) +
+  theme_bw() + theme(legend.position = "none") +
+  scale_x_discrete(labels=function(x){gsub("\\+", "\n+", gsub(" ", "\n", x))}) +
+  scale_y_continuous(labels = c("60%", "70%", "80%", "90%", "100%"),
+                     breaks = c(0.6, 0.7, 0.8, 0.9, 1.0),
+                     minor_breaks = seq(0.6, 1.0, 0.05)) +
+  labs(title = "Ideel: hits ≥95% coverage", x = NULL, y = NULL) +
+  coord_cartesian(ylim=c(0.65, 1.04)) +
+  colour_scale
+
+# ideel_plot
+# ideel_plot_fixed
+```
+
+
+
+## Combined plots
+
+```{r combined_plots, fig.width = 10, fig.height = 7.5, useDingbats = FALSE}
+plot_grid(mean_plot, worst_plot, ale_plot, ideel_plot, nrow = 2, ncol = 2, align="v")
+```
+
+```{r combined_plots_fixed, fig.width = 10, fig.height = 7.5, useDingbats = FALSE}
+plot_grid(mean_plot_fixed, worst_plot_fixed, ale_plot_fixed, ideel_plot_fixed, nrow = 2, ncol = 2, align="v")
+```
+
+```{r combined_plots_long, fig.width = 12.5, fig.height = 3.75, useDingbats = FALSE}
+plot_grid(mean_plot_long, worst_plot_long, nrow = 1, ncol = 2, align="v")
+```
+
+
+
+
+
+
+
+

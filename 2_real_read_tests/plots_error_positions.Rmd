@@ -1,0 +1,170 @@
+---
+title: "Trycycler real read tests"
+date: "2020-06-24"
+author: "Ryan Wick"
+output:
+  html_document:
+    pandoc_args: ["+RTS", "-K64m", "-RTS", "--self-contained",]
+    df_print: paged
+    keep_md: false
+    toc: true
+    toc_float: true
+---
+
+This document contains the R code used to generate plots for the real read tests part of my Trycycler paper.
+
+This script is licensed under a Creative Commons Attribution 4.0 International License. You should have received a copy of the license along with this work. If not, see <http://creativecommons.org/licenses/by/4.0/>.
+
+
+## Load libraries
+
+```{r}
+library(gsubfn)
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(cowplot)
+library(scales)
+```
+
+
+## Output settings
+
+```{r}
+opts_chunk$set(fig.width=8, fig.height=5, dpi=300, fig.path='./plots/', echo=TRUE, dev=c('png','pdf'), warning=FALSE, message=FALSE)
+pdf.options(useDingbats = FALSE)
+```
+
+
+## Load data
+
+```{r error_positions, fig.width = 12, fig.height = 12, useDingbats = FALSE}
+custom_trans <- trans_new(name = "custom trans",
+                          transform = function(x) x ^ (1/2),
+                          inverse = function(x) x ^ 2)
+
+get_length <- function(filename) {
+  data <- read_delim(filename, "\t", escape_double = FALSE, col_names = c("type", "val1", "val2"), trim_ws = TRUE)
+  length <- as.numeric(filter(data, type=="length")$val1)
+  return(length)
+}
+get_repeat_positions <- function(filename, bin_size) {
+  data <- read_delim(filename, "\t", escape_double = FALSE, col_names = c("type", "val1", "val2"), trim_ws = TRUE)
+  repeat_positions <- filter(data, type=="repeat")[,2-3]
+  colnames(repeat_positions) <- c("start", "end")
+  repeat_positions$start <- floor(as.numeric(repeat_positions$start)/bin_size)*bin_size  # round start positions down
+  repeat_positions$end <- ceiling(as.numeric(repeat_positions$end)/bin_size)*bin_size    # round end positions up
+  return(repeat_positions)
+}
+get_error_positions <- function(filename) {
+  data <- read_delim(filename, "\t", escape_double = FALSE, col_names = c("type", "val1", "val2"), trim_ws = TRUE)
+  error_positions <- filter(data, type=="error")[,2]
+  colnames(error_positions) <- c("pos")
+  error_positions$pos <- as.numeric(error_positions$pos)
+  if (dim(error_positions)[1] == 0) {
+    # hack to fix screwy plot: if there are no errors, add one out of range (otherwise the y axis doesn't draw)
+    dummy <- data.frame(21837981)
+    colnames(dummy)<-c("pos")
+    error_positions <- rbind(error_positions, dummy)
+  }
+  return(error_positions)
+}
+get_starting_position_1 <- function(filename) {
+  data <- read_delim(filename, "\t", escape_double = FALSE, col_names = c("type", "val1", "val2"), trim_ws = TRUE)
+  starting_pos_1 <- as.numeric(filter(data, type=="starting_pos_1")$val1)
+  return(starting_pos_1)
+}
+get_starting_position_2 <- function(filename) {
+  data <- read_delim(filename, "\t", escape_double = FALSE, col_names = c("type", "val1", "val2"), trim_ws = TRUE)
+  starting_pos_2 <- as.numeric(filter(data, type=="starting_pos_2")$val1)
+  return(starting_pos_2)
+}
+
+error_plot <- function(filename, title, x_axis) {
+  length <- get_length(filename)
+  bin_size <- round(length / 500)
+  bin_size <- 10000
+  repeat_positions <- get_repeat_positions(filename, bin_size)
+  error_positions <- get_error_positions(filename)
+  starting_pos_1 <- get_starting_position_1(filename)
+  starting_pos_2 <- get_starting_position_2(filename)
+
+  p1 <- ggplot() +
+    geom_histogram(data=error_positions, aes(pos), binwidth=bin_size, boundary=0) +
+    geom_vline(xintercept = starting_pos_1, linetype="dotted", color = "magenta", size = 0.75) +
+    geom_vline(xintercept = starting_pos_2, linetype="dotted", color = "magenta", size = 0.75) +
+    theme_bw() + theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+                       plot.margin = unit(c(0, 0, 0, 0), "cm"), plot.background = element_blank()) +
+    scale_x_continuous(expand=c(0, 0), breaks=NULL) +
+    scale_y_continuous(breaks=c(0, 4, 16, 36, 64, 100), minor_breaks=NULL, expand=c(0, 0)) +
+    coord_trans(y = custom_trans, limx=c(0, length), limy=c(0, 100)) +
+    labs(title = title, x = NULL, y = "errors")
+  
+  p2 <- ggplot() +
+    geom_rect(data=repeat_positions, aes(xmin = start, xmax = end, ymin = 0, ymax = 1), fill = "red", alpha = 1) +
+    theme_bw() + theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(),
+                       axis.title.y = element_text(angle = 0, vjust=0.5),
+                       plot.margin = unit(c(0, 0, 0, 0), "cm"), plot.background = element_blank()) +
+    scale_x_continuous(expand=c(0, 0), breaks=seq(0, 10000000, 500000), labels=seq(0, 10, 0.5)) +
+    scale_y_sqrt(breaks=NULL, expand=c(0, 0)) +
+    coord_cartesian(xlim=c(0, length), ylim=c(0, 1)) +
+    labs(title = NULL, x = "chromosome position (Mbp)", y = "repeats")
+  
+  p <- plot_grid(p1, p2, nrow = 2, ncol = 1, align="v", rel_heights=c(2.3, 1))
+}
+
+p1 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/unicycler_hybrid_chromosome.errors", "Unicycler hybrid")
+p2 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/flye_chromosome.errors", "Flye")
+p3 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/flye_medaka_chromosome.errors", "Flye+Medaka")
+p4 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/flye_medaka_pilon_chromosome.errors", "Flye+Medaka+Pilon")
+p5 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/trycycler_chromosome.errors", "Trycycler")
+p6 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/trycycler_medaka_chromosome.errors", "Trycycler+Medaka")
+p7 <- error_plot("assemblies/chromosome_only/Acinetobacter_baumannii_J9/trycycler_medaka_pilon_chromosome.errors", "Trycycler+Medaka+Pilon")
+plot_grid(p1, p2, p3, p4, p5, p6, p7, ncol = 1, align="v")
+
+p1 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/unicycler_hybrid_chromosome.errors", "Unicycler hybrid")
+p2 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/flye_chromosome.errors", "Flye")
+p3 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/flye_medaka_chromosome.errors", "Flye+Medaka")
+p4 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/flye_medaka_pilon_chromosome.errors", "Flye+Medaka+Pilon")
+p5 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/trycycler_chromosome.errors", "Trycycler")
+p6 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/trycycler_medaka_chromosome.errors", "Trycycler+Medaka")
+p7 <- error_plot("assemblies/chromosome_only/Citrobacter_koseri_MINF_9D/trycycler_medaka_pilon_chromosome.errors", "Trycycler+Medaka+Pilon")
+plot_grid(p1, p2, p3, p4, p5, p6, p7, ncol = 1, align="v")
+
+
+p1 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/unicycler_hybrid_chromosome.errors", "Unicycler hybrid")
+p2 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/flye_chromosome.errors", "Flye")
+p3 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/flye_medaka_chromosome.errors", "Flye+Medaka")
+p4 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/flye_medaka_pilon_chromosome.errors", "Flye+Medaka+Pilon")
+p5 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/trycycler_chromosome.errors", "Trycycler")
+p6 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/trycycler_medaka_chromosome.errors", "Trycycler+Medaka")
+p7 <- error_plot("assemblies/chromosome_only/Enterobacter_kobei_MSB1_1B/trycycler_medaka_pilon_chromosome.errors", "Trycycler+Medaka+Pilon")
+plot_grid(p1, p2, p3, p4, p5, p6, p7, ncol = 1, align="v")
+
+p1 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/unicycler_hybrid_chromosome.errors", "Unicycler hybrid")
+p2 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/flye_chromosome.errors", "Flye")
+p3 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/flye_medaka_chromosome.errors", "Flye+Medaka")
+p4 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/flye_medaka_pilon_chromosome.errors", "Flye+Medaka+Pilon")
+p5 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/trycycler_chromosome.errors", "Trycycler")
+p6 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/trycycler_medaka_chromosome.errors", "Trycycler+Medaka")
+p7 <- error_plot("assemblies/chromosome_only/Haemophilus_M1C132_1/trycycler_medaka_pilon_chromosome.errors", "Trycycler+Medaka+Pilon")
+plot_grid(p1, p2, p3, p4, p5, p6, p7, ncol = 1, align="v")
+
+p1 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/unicycler_hybrid_chromosome.errors", "Unicycler hybrid")
+p2 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/flye_chromosome.errors", "Flye")
+p3 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/flye_medaka_chromosome.errors", "Flye+Medaka")
+p4 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/flye_medaka_pilon_chromosome.errors", "Flye+Medaka+Pilon")
+p5 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/trycycler_chromosome.errors", "Trycycler")
+p6 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/trycycler_medaka_chromosome.errors", "Trycycler+Medaka")
+p7 <- error_plot("assemblies/chromosome_only/Klebsiella_oxytoca_MSB1_2C/trycycler_medaka_pilon_chromosome.errors", "Trycycler+Medaka+Pilon")
+plot_grid(p1, p2, p3, p4, p5, p6, p7, ncol = 1, align="v")
+
+p1 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/unicycler_hybrid_chromosome.errors", "Unicycler hybrid")
+p2 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/flye_chromosome.errors", "Flye")
+p3 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/flye_medaka_chromosome.errors", "Flye+Medaka")
+p4 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/flye_medaka_pilon_chromosome.errors", "Flye+Medaka+Pilon")
+p5 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/trycycler_chromosome.errors", "Trycycler")
+p6 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/trycycler_medaka_chromosome.errors", "Trycycler+Medaka")
+p7 <- error_plot("assemblies/chromosome_only/Klebsiella_variicola_INF345/trycycler_medaka_pilon_chromosome.errors", "Trycycler+Medaka+Pilon")
+plot_grid(p1, p2, p3, p4, p5, p6, p7, ncol = 1, align="v")
+```

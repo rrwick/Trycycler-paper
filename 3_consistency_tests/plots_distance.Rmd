@@ -1,0 +1,145 @@
+---
+title: "Trycycler consistency tests"
+date: "2020-12-18"
+author: "Ryan Wick"
+output:
+  html_document:
+    pandoc_args: ["+RTS", "-K64m", "-RTS", "--self-contained",]
+    df_print: paged
+    keep_md: false
+    toc: true
+    toc_float: true
+---
+
+This document contains the R code used to generate plots for the consistency tests part of my Trycycler paper.
+
+This script is licensed under a Creative Commons Attribution 4.0 International License. You should have received a copy of the license along with this work. If not, see <http://creativecommons.org/licenses/by/4.0/>.
+
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(cowplot)
+library(scales)
+```
+
+
+## Output settings
+
+```{r}
+opts_chunk$set(fig.width=8, fig.height=5, dpi=300, fig.path='./plots/', echo=TRUE, dev=c('png','pdf'), warning=FALSE, message=FALSE)
+pdf.options(useDingbats = FALSE)
+```
+
+
+## Load data
+
+Load the distances between assemblies and the polished reference:
+```{r}
+load_distances_to_ref <- function(filename) {
+  distances <- read_delim(filename, "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE, skip = 1)
+  distances %>% select(X1, X2) -> distances
+  colnames(distances) <- c("Assembler", "Distance")
+  distances$Assembler <- str_replace(distances$Assembler, "trycycler_.+", "trycycler")
+  distances %>% filter(Assembler != "polished") -> distances
+  distances$Assembler <- str_to_title(distances$Assembler)
+  distances$Assembler <- factor(distances$Assembler, levels = c("Miniasm", "Raven", "Flye", "Trycycler"))
+  return(distances)
+}
+distances_1 <- load_distances_to_ref("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Acinetobacter_baumannii_J9_chromosome/distances_per_mbp.phylip")
+distances_2 <- load_distances_to_ref("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Citrobacter_koseri_MINF_9D_chromosome/distances_per_mbp.phylip")
+distances_3 <- load_distances_to_ref("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Enterobacter_kobei_MSB1_1B_chromosome/distances_per_mbp.phylip")
+distances_4 <- load_distances_to_ref("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Haemophilus_M1C132_1_chromosome/distances_per_mbp.phylip")
+distances_5 <- load_distances_to_ref("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Klebsiella_oxytoca_MSB1_2C_chromosome/distances_per_mbp.phylip")
+distances_6 <- load_distances_to_ref("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Klebsiella_variicola_INF345_chromosome/distances_per_mbp.phylip")
+
+distances_to_ref <- bind_rows(distances_1, distances_2)
+distances_to_ref <- bind_rows(distances_to_ref, distances_3)
+distances_to_ref <- bind_rows(distances_to_ref, distances_4)
+distances_to_ref <- bind_rows(distances_to_ref, distances_5)
+distances_to_ref <- bind_rows(distances_to_ref, distances_6)
+
+distances_to_ref$Distance_log <- log10(distances_to_ref$Distance)
+```
+
+Load the distances between Trycycler assemblies:
+```{r}
+load_trycycler_distances <- function(filename) {
+  distances <- read_delim(filename, "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE, skip = 1)
+  distances %>% remove_rownames %>% column_to_rownames(var="X1") -> distances
+  colnames(distances) <- rownames(distances)
+  distances %>% select(contains("trycycler_")) -> distances
+  as_tibble(cbind(nms = names(distances), t(distances))) -> distances
+  distances %>% select(contains("trycycler_")) -> d
+  stopifnot(dim(d) == c(6, 6))
+  distances = c(d[[1,2]], d[[1,3]], d[[1,4]], d[[1,5]], d[[1,6]], d[[2,3]], d[[2,4]], d[[2,5]], d[[2,6]], d[[3,4]], d[[3,5]], d[[3,6]], d[[4,5]], d[[4,6]], d[[5,6]])
+  distances <- as_tibble(distances)
+  colnames(distances) <- c("Distance")
+  distances$Assembler <- rep("trycycler", 15)
+  distances$Assembler <- str_to_title(distances$Assembler)
+  distances$Distance <- as.numeric(distances$Distance)
+  return(distances)
+}
+distances_1 <- load_trycycler_distances("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Acinetobacter_baumannii_J9_chromosome/distances_per_mbp.phylip")
+distances_2 <- load_trycycler_distances("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Citrobacter_koseri_MINF_9D_chromosome/distances_per_mbp.phylip")
+distances_3 <- load_trycycler_distances("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Enterobacter_kobei_MSB1_1B_chromosome/distances_per_mbp.phylip")
+distances_4 <- load_trycycler_distances("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Haemophilus_M1C132_1_chromosome/distances_per_mbp.phylip")
+distances_5 <- load_trycycler_distances("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Klebsiella_oxytoca_MSB1_2C_chromosome/distances_per_mbp.phylip")
+distances_6 <- load_trycycler_distances("/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/Klebsiella_variicola_INF345_chromosome/distances_per_mbp.phylip")
+
+trycycler_distances <- bind_rows(distances_1, distances_2)
+trycycler_distances <- bind_rows(trycycler_distances, distances_3)
+trycycler_distances <- bind_rows(trycycler_distances, distances_4)
+trycycler_distances <- bind_rows(trycycler_distances, distances_5)
+trycycler_distances <- bind_rows(trycycler_distances, distances_6)
+
+trycycler_distances$Distance_log <- log10(trycycler_distances$Distance)
+```
+
+
+Plot distances:
+```{r distance_plots, fig.width = 7, fig.height = 2.3, useDingbats = FALSE}
+colour_scale <- scale_fill_manual("Assembler",
+                    values = c("#e89133", "#e5e82a", "#1ee46b", "#91c5ff"),
+                    limits = c("Miniasm", "Raven",   "Flye",    "Trycycler"))
+
+p1 <- ggplot(distances_to_ref, aes(x = Assembler, y = Distance, fill = Assembler)) +
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.093) +
+  theme_bw() + theme(legend.position = "none") +
+  colour_scale + 
+  scale_y_log10(limits=c(30, 3200), breaks=c(30, 100, 300, 1000, 3000), minor_breaks=NULL) +
+  labs(title = "Assemblies vs hybrid-polished reference", x = NULL, y = "Differences per Mbp")
+
+p2 <- ggplot(trycycler_distances, aes(x = Assembler, y = Distance, fill = Assembler)) +
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 0.093) +
+  theme_bw() + theme(legend.position = "none") +
+  colour_scale + 
+  scale_y_log10(limits=c(30, 3200), breaks=c(30, 100, 300, 1000, 3000), minor_breaks=NULL) +
+  labs(title = "Trycycler vs Trycycler", x = NULL, y = "Differences per Mbp")
+
+plot_grid(p1, p2, nrow = 1, ncol = 2, align="v", rel_widths = c(11, 6))
+```
+
+```{r distance_plots, fig.width = 7, fig.height = 2.3, useDingbats = FALSE}
+colour_scale <- scale_fill_manual("Assembler",
+                    values = c("#e89133", "#e5e82a", "#1ee46b", "#91c5ff"),
+                    limits = c("Miniasm", "Raven",   "Flye",    "Trycycler"))
+
+p1 <- ggplot(distances_to_ref, aes(x = Assembler, y = Distance, fill = Assembler)) +
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth = 100) +
+  theme_bw() + theme(legend.position = "none") +
+  colour_scale + 
+  scale_y_continuous(limits=c(0, 3200)) +
+  labs(title = "Assemblies vs hybrid-polished reference", x = NULL, y = "Differences per Mbp")
+
+p2 <- ggplot(trycycler_distances, aes(x = Assembler, y = Distance, fill = Assembler)) +
+  geom_dotplot(stackdir = "center", binaxis = "y", binwidth =  100) +
+  theme_bw() + theme(legend.position = "none") +
+  colour_scale + 
+  scale_y_continuous(limits=c(0, 3200)) +
+  labs(title = "Trycycler vs Trycycler", x = NULL, y = "Differences per Mbp")
+
+plot_grid(p1, p2, nrow = 1, ncol = 2, align="v", rel_widths = c(11, 6))
+```
