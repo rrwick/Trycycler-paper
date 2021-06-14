@@ -39,7 +39,7 @@ pdf.options(useDingbats = FALSE)
 
 Load the assembly comparisons:
 ```{r}
-excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/Paper_GitHub_repo/2_real_read_tests/table_s2_real_read_results.xlsx"
+excel_filename <- "table_s2_real_read_results.xlsx"
 
 comparisons <- read_excel(excel_filename, sheet = "Comparisons", col_names = FALSE)
 
@@ -168,7 +168,7 @@ worst_comparisons_long <- na.omit(worst_comparisons_long)
 
 Load the ALE scores:
 ```{r}
-excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/Paper_GitHub_repo/2_real_read_tests/table_s2_real_read_results.xlsx"
+excel_filename <- "table_s2_real_read_results.xlsx"
 
 ale_scores <- read_excel(excel_filename, sheet = "ALE z-scores", col_names = FALSE)
 unicycler_ale <- pull(ale_scores[2:13,2])
@@ -214,7 +214,7 @@ ale_z_scores_fixed$ale <- as.numeric(as.character(ale_z_scores_fixed$ale))
 
 Load the ideel scores:
 ```{r}
-excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/Paper_GitHub_repo/2_real_read_tests/table_s2_real_read_results.xlsx"
+excel_filename <- "table_s2_real_read_results.xlsx"
 
 ideel <- read_excel(excel_filename, sheet = "IDEEL results", col_names = FALSE)
 unicycler_ale <- pull(ideel[2:13,2])

@@ -38,7 +38,7 @@ pdf.options(useDingbats = FALSE)
 ## Load data
 
 ```{r}
-excel_filename <- "/Users/ryan/Dropbox/Uni_research/Projects/Trycycler/Paper_GitHub_repo/simulated_read_tests/table_s1_simulated_read_results.xlsx"
+excel_filename <- "table_s1_simulated_read_results.xlsx"
 
 comparisons <- read_excel(excel_filename, sheet = "Comparisons", col_names = FALSE)
 
