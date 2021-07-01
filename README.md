@@ -4,9 +4,14 @@ This repo contains supplementary data for our paper describing Trycycler: [Wick 
 
 If you're interested in Trycycler itself (i.e. not the paper), then head over to [its GitHub repo](https://github.com/rrwick/Trycycler).
 
-In this repo, you'll find the following subdirectories:
-* [`1_simulated_read_tests`](1_simulated_read_tests): contains the methods, data and results for the simulated read tests. These are the tests where we assembled simulated read sets and assessed accuracy by comparing the assemblies back to the original reference genome.
-* [`2_real_read_tests`](2_real_read_tests): contains the methods, data and results for the real read tests. These are the tests where we assembled two independent real read sets for each genome and assessed accuracy by comparing the two assemblies to each other.
-* [`3_consistency_tests`](3_consistency_tests): contains the methods, data and results for the consistency tests. These are the tests where we had multiple different people assemble the same read sets using Trycycler to assess how consistently Trycycler performs in different hands.
+This repo has the following subdirectories:
+* [`1_simulated_read_tests`](1_simulated_read_tests): the methods, data and results for the simulated read tests. These are the tests where we assembled simulated read sets and assessed accuracy by comparing the assemblies back to the original reference genome.
+* [`2_real_read_tests`](2_real_read_tests): the methods, data and results for the real read tests. These are the tests where we assembled two independent real read sets for each genome and assessed accuracy by comparing the two assemblies to each other.
+* [`3_consistency_tests`](3_consistency_tests): the methods, data and results for the consistency tests. These are the tests where we had multiple different people assemble the same read sets using Trycycler to assess how consistently Trycycler performs in different hands.
 * [`figures`](figures): contains all figures (both main text and supplementary) for the paper.
 * [`scripts`](scripts): contains custom Python scripts we wrote to conduct the analyses in the paper.
+
+Summarised results for each of the sections are available in the following supplementary tables, each an Excel file with multiple worksheets:
+* [table_s1_simulated_read_results.xlsx](table_s1_simulated_read_results.xlsx): results for the simulated read tests
+* [table_s2_real_read_results.xlsx](table_s2_real_read_results.xlsx): results for the real read tests
+* [table_s3_consistency_test_results.xlsx](table_s3_consistency_test_results.xlsx): results for the multi-user consistency tests
