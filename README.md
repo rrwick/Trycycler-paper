@@ -15,3 +15,5 @@ Summarised results for each of the sections are available in the following suppl
 * [table_s1_simulated_read_results.xlsx](table_s1_simulated_read_results.xlsx): results for the simulated read tests
 * [table_s2_real_read_results.xlsx](table_s2_real_read_results.xlsx): results for the real read tests
 * [table_s3_consistency_test_results.xlsx](table_s3_consistency_test_results.xlsx): results for the multi-user consistency tests
+
+The datasets used in this paper (reads, assemblies and references) are too large for a GitHub repo, so you can download them from here: [bridges.monash.edu/articles/dataset/Trycycler_paper_dataset/14890734](https://bridges.monash.edu/articles/dataset/Trycycler_paper_dataset/14890734)
