@@ -123,3 +123,16 @@ for c in Acinetobacter_baumannii_J9_chromosome Enterobacter_kobei_MSB1_1B_chromo
     ../../../../scripts/summarise_differences.py *_miniasm_*.fasta *_raven_*.fasta *_flye_*.fasta
 done > other_vs_other_differences
 ```
+
+```bash
+for c in Acinetobacter_baumannii_J9_chromosome Citrobacter_koseri_MINF_9D_chromosome Enterobacter_kobei_MSB1_1B_chromosome Haemophilus_M1C132_1_chromosome Klebsiella_oxytoca_MSB1_2C_chromosome Klebsiella_variicola_INF345_chromosome; do
+    cd /Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/consistency_tests/assemblies/grouped_contigs/"$c"
+    printf "\n\n\n"$c"\n"
+    ../../../../scripts/summarise_differences_with_motifs.py *_ben_*.fasta.gz *_polished_*.fasta.gz
+    ../../../../scripts/summarise_differences_with_motifs.py *_guillaume_*.fasta.gz *_polished_*.fasta.gz
+    ../../../../scripts/summarise_differences_with_motifs.py *_jane_*.fasta.gz *_polished_*.fasta.gz
+    ../../../../scripts/summarise_differences_with_motifs.py *_kelly_*.fasta.gz *_polished_*.fasta.gz
+    ../../../../scripts/summarise_differences_with_motifs.py *_louise_*.fasta.gz *_polished_*.fasta.gz
+    ../../../../scripts/summarise_differences_with_motifs.py *_ryan_*.fasta.gz *_polished_*.fasta.gz
+done
+```

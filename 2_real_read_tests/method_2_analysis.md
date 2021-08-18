@@ -558,3 +558,34 @@ cd /Users/ryan/Dropbox/Uni_research/Projects/Trycycler/PAPER/GitHub_repo/real_re
 ../../../../scripts/error_positions.py trycycler_medaka_pilon_ligation_chromosome.fasta trycycler_medaka_pilon_rapid_chromosome.fasta > trycycler_medaka_pilon_chromosome.errors
 ../../../../scripts/error_positions.py unicycler_hybrid_ligation_chromosome.fasta unicycler_hybrid_rapid_chromosome.fasta > unicycler_hybrid_chromosome.errors
 ```
+
+
+
+
+## Medaka before Trycycler
+
+These pairwise alignments were to compare the different possible orders of running Medaka:
+* Trycycler+Medaka
+* Medaka+Trycycler
+* Medaka+Trycycler+Medaka
+
+```bash
+for s in Acinetobacter_baumannii_J9 Citrobacter_koseri_MINF_9D Enterobacter_kobei_MSB1_1B Haemophilus_M1C132_1 Klebsiella_oxytoca_MSB1_2C Klebsiella_variicola_INF345; do
+    cd ~/trycycler_real_read_tests/chromosome_only/"$s"
+
+    echo ">medaka_trycycler_ligation" > medaka_trycycler_ligation_chromosome.fasta
+    head -n2 ~/trycycler_real_read_tests/"$s"/11_medaka_trycycler_ligation/assembly.fasta | tail -n1 >> medaka_trycycler_ligation_chromosome.fasta
+    echo ">medaka_trycycler_rapid" > medaka_trycycler_rapid_chromosome.fasta
+    head -n2 ~/trycycler_real_read_tests/"$s"/12_medaka_trycycler_rapid/assembly.fasta | tail -n1 >> medaka_trycycler_rapid_chromosome.fasta
+
+    echo ">medaka_trycycler_medaka_ligation" > medaka_trycycler_medaka_ligation_chromosome.fasta
+    head -n2 ~/trycycler_real_read_tests/"$s"/11_medaka_trycycler_ligation/medaka.fasta | tail -n1 >> medaka_trycycler_medaka_ligation_chromosome.fasta
+    echo ">medaka_trycycler_medaka_rapid" > medaka_trycycler_medaka_rapid_chromosome.fasta
+    head -n2 ~/trycycler_real_read_tests/"$s"/12_medaka_trycycler_rapid/medaka.fasta | tail -n1 >> medaka_trycycler_medaka_rapid_chromosome.fasta
+    
+    printf "\n"$s"\n"
+    ../../scripts/pairwise_align.py trycycler_medaka_ligation_chromosome.fasta trycycler_medaka_rapid_chromosome.fasta
+    ../../scripts/pairwise_align.py medaka_trycycler_ligation_chromosome.fasta medaka_trycycler_rapid_chromosome.fasta
+    ../../scripts/pairwise_align.py medaka_trycycler_medaka_ligation_chromosome.fasta medaka_trycycler_medaka_rapid_chromosome.fasta
+done
+```

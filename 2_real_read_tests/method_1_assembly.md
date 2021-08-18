@@ -828,3 +828,107 @@ mv "$last_round" polished.fasta
 rm round_*.fasta
 cd ..
 ```
+
+
+
+
+
+## Medaka before Trycycler
+
+I later decided to test an alternative approach: running Medaka on Trycycler's input assemblies.
+
+```bash
+cd ~/trycycler_real_read_tests/"$s"
+mkdir 11_medaka_trycycler_ligation
+cp ligation.fastq.gz 11_medaka_trycycler_ligation/reads.fastq.gz
+cp -r 05_trycycler_ligation/assemblies 11_medaka_trycycler_ligation/assemblies
+target_depth=50
+mean_length=$(seqtk comp ligation.fastq.gz | awk '{count++; bases += $2} END{print bases/count}')
+read_count=$(echo $target_depth"*"$genome_size"/"$mean_length | bc)
+
+for i in {00..11}; do
+    seqtk sample -s "$i" ligation.fastq.gz "$read_count" | paste - - - - | shuf | tr '\t' '\n' > sample_"$i".fastq
+done
+
+mkdir 11_medaka_trycycler_ligation/medaka_assemblies
+for i in {00..11}; do
+    medaka_consensus -i sample_"$i".fastq -d 11_medaka_trycycler_ligation/assemblies/assembly_"$i".fasta -o medaka_temp -m r941_min_high_g360 -t 32
+    mv medaka_temp/consensus.fasta 11_medaka_trycycler_ligation/medaka_assemblies/assembly_"$i".fasta
+    rm -r medaka_temp 11_medaka_trycycler_ligation/assemblies/*.fai 11_medaka_trycycler_ligation/assemblies/*.mmi
+done
+rm sample_*.fastq
+
+~/programs/Trycycler/trycycler-runner.py cluster --reads 11_medaka_trycycler_ligation/reads.fastq.gz --assemblies 11_medaka_trycycler_ligation/medaka_assemblies/*.fasta --out_dir 11_medaka_trycycler_ligation/trycycler --threads 32 &> 11_medaka_trycycler_ligation/cluster.out
+# Choose clusters
+
+~/programs/Trycycler/trycycler-runner.py reconcile  --threads 32 --reads 11_medaka_trycycler_ligation/reads.fastq.gz --cluster_dir 11_medaka_trycycler_ligation/trycycler/cluster_001
+~/programs/Trycycler/trycycler-runner.py reconcile  --threads 32 --reads 11_medaka_trycycler_ligation/reads.fastq.gz --cluster_dir 11_medaka_trycycler_ligation/trycycler/cluster_002
+~/programs/Trycycler/trycycler-runner.py reconcile  --threads 32 --reads 11_medaka_trycycler_ligation/reads.fastq.gz --cluster_dir 11_medaka_trycycler_ligation/trycycler/cluster_003
+# Fix reconciliation issues
+
+for c in 11_medaka_trycycler_ligation/trycycler/cluster_*; do
+    ~/programs/Trycycler/trycycler-runner.py msa --cluster_dir "$c" --threads 32
+done
+
+~/programs/Trycycler/trycycler-runner.py partition --reads 11_medaka_trycycler_ligation/reads.fastq.gz --cluster_dirs 11_medaka_trycycler_ligation/trycycler/cluster_* --threads 32
+
+for c in 11_medaka_trycycler_ligation/trycycler/cluster_*; do
+    ~/programs/Trycycler/trycycler-runner.py consensus --cluster_dir "$c" --threads 32
+done
+cat 11_medaka_trycycler_ligation/trycycler/cluster_*/7_final_consensus.fasta > 11_medaka_trycycler_ligation/assembly.fasta
+
+for c in 11_medaka_trycycler_ligation/trycycler/cluster_*; do
+    medaka_consensus -i "$c"/4_reads.fastq -d "$c"/7_final_consensus.fasta -o "$c"/medaka -m r941_min_high_g360 -t 32
+    mv "$c"/medaka/consensus.fasta "$c"/8_medaka.fasta
+    rm -r "$c"/medaka "$c"/*.fai "$c"/*.mmi
+done
+cat 11_medaka_trycycler_ligation/trycycler/cluster_*/8_medaka.fasta > 11_medaka_trycycler_ligation/medaka.fasta
+```
+
+```bash
+cd ~/trycycler_real_read_tests/"$s"
+mkdir 12_medaka_trycycler_rapid
+cp rapid.fastq.gz 12_medaka_trycycler_rapid/reads.fastq.gz
+cp -r 06_trycycler_rapid/assemblies 12_medaka_trycycler_rapid/assemblies
+target_depth=50
+mean_length=$(seqtk comp rapid.fastq.gz | awk '{count++; bases += $2} END{print bases/count}')
+read_count=$(echo $target_depth"*"$genome_size"/"$mean_length | bc)
+
+for i in {00..11}; do
+    seqtk sample -s "$i" rapid.fastq.gz "$read_count" | paste - - - - | shuf | tr '\t' '\n' > sample_"$i".fastq
+done
+
+mkdir 12_medaka_trycycler_rapid/medaka_assemblies
+for i in {00..11}; do
+    medaka_consensus -i sample_"$i".fastq -d 12_medaka_trycycler_rapid/assemblies/assembly_"$i".fasta -o medaka_temp -m r941_min_high_g360 -t 32
+    mv medaka_temp/consensus.fasta 12_medaka_trycycler_rapid/medaka_assemblies/assembly_"$i".fasta
+    rm -r medaka_temp 12_medaka_trycycler_rapid/assemblies/*.fai 12_medaka_trycycler_rapid/assemblies/*.mmi
+done
+rm sample_*.fastq
+
+~/programs/Trycycler/trycycler-runner.py cluster --reads 12_medaka_trycycler_rapid/reads.fastq.gz --assemblies 12_medaka_trycycler_rapid/medaka_assemblies/*.fasta --out_dir 12_medaka_trycycler_rapid/trycycler --threads 32 &> 12_medaka_trycycler_rapid/cluster.out
+# Choose clusters
+
+~/programs/Trycycler/trycycler-runner.py reconcile --threads 32 --reads 12_medaka_trycycler_rapid/reads.fastq.gz --cluster_dir 12_medaka_trycycler_rapid/trycycler/cluster_001
+~/programs/Trycycler/trycycler-runner.py reconcile --threads 32 --reads 12_medaka_trycycler_rapid/reads.fastq.gz --cluster_dir 12_medaka_trycycler_rapid/trycycler/cluster_002
+~/programs/Trycycler/trycycler-runner.py reconcile --threads 32 --reads 12_medaka_trycycler_rapid/reads.fastq.gz --cluster_dir 12_medaka_trycycler_rapid/trycycler/cluster_003
+# Fix reconciliation issues
+
+for c in 12_medaka_trycycler_rapid/trycycler/cluster_*; do
+    ~/programs/Trycycler/trycycler-runner.py msa --cluster_dir "$c" --threads 32
+done
+
+~/programs/Trycycler/trycycler-runner.py partition --reads 12_medaka_trycycler_rapid/reads.fastq.gz --cluster_dirs 12_medaka_trycycler_rapid/trycycler/cluster_* --threads 32
+
+for c in 12_medaka_trycycler_rapid/trycycler/cluster_*; do
+    ~/programs/Trycycler/trycycler-runner.py consensus --cluster_dir "$c" --threads 32
+done
+cat 12_medaka_trycycler_rapid/trycycler/cluster_*/7_final_consensus.fasta > 12_medaka_trycycler_rapid/assembly.fasta
+
+for c in 12_medaka_trycycler_rapid/trycycler/cluster_*; do
+    medaka_consensus -i "$c"/4_reads.fastq -d "$c"/7_final_consensus.fasta -o "$c"/medaka -m r941_min_high_g360 -t 32
+    mv "$c"/medaka/consensus.fasta "$c"/8_medaka.fasta
+    rm -r "$c"/medaka "$c"/*.fai "$c"/*.mmi
+done
+cat 12_medaka_trycycler_rapid/trycycler/cluster_*/8_medaka.fasta > 12_medaka_trycycler_rapid/medaka.fasta
+```
