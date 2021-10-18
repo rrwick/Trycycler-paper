@@ -1,6 +1,6 @@
 <p align="center"><img src="https://github.com/rrwick/Trycycler/blob/main/images/logo_transparent.png" alt="Trycycler" width="70%"></p>
 
-This repo contains supplementary data for our paper describing Trycycler: [Wick RR, Judd LM, Cerdeira LT, Hawkey J, Méric G, Vezina B, Wyres KL, Holt KE. Trycycler: consensus long-read assemblies for bacterial genomes. bioRxiv. 2021. doi:10.1101/2021.07.04.451066.](https://www.biorxiv.org/content/10.1101/2021.07.04.451066v1)
+This repo contains supplementary data for our paper describing Trycycler: [Wick RR, Judd LM, Cerdeira LT, Hawkey J, Méric G, Vezina B, Wyres KL, Holt KE. Trycycler: consensus long-read assemblies for bacterial genomes. Genome Biology. 2021. doi:10.1186/s13059-021-02483-z.](https://doi.org/10.1186/s13059-021-02483-z)
 
 If you're interested in Trycycler itself (i.e. not the paper), then head over to [its GitHub repo](https://github.com/rrwick/Trycycler).
 
